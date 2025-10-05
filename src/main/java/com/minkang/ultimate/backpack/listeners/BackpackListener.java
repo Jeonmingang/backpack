@@ -14,6 +14,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -100,48 +101,45 @@ public class BackpackListener implements Listener {
     }
 
     @EventHandler
-    public void onClick(InventoryClickEvent e) {
-        if (!(e.getWhoClicked() instanceof Player)) return;
-        Player p = (Player) e.getWhoClicked();
-        String title = e.getView().getTitle();
-        String plain = ChatColor.stripColor(title);
-        if (plain == null || !plain.startsWith("[개인가방]")) return;
+public void onClick(InventoryClickEvent e) {
+    if (!(e.getWhoClicked() instanceof Player)) return;
+    Player p = (Player) e.getWhoClicked();
+    String title = e.getView().getTitle();
+    String plain = ChatColor.stripColor(title);
+    if (plain == null || !plain.startsWith("[개인가방]")) return;
 
+    // 위험한 동작만 차단
+    if (e.getClick() == ClickType.SWAP_OFFHAND || 
+        e.getClick() == ClickType.DROP || e.getClick() == ClickType.CONTROL_DROP || 
+        e.getClick() == ClickType.MIDDLE || e.getClick() == ClickType.DOUBLE_CLICK) {
+        e.setCancelled(true);
+        return;
+    }
+
+    Inventory top = e.getView().getTopInventory();
+    Inventory bottom = e.getView().getBottomInventory();
+
+    // 가방 아이템이 가방 내부로 들어가는 것을 차단
+    if (e.getClickedInventory() == top) {
         ItemStack cursor = e.getCursor();
-        if (cursor != null) cursor = ItemSanitizer.sanitize(cursor, plugin.getConfig());
-        ItemStack current = e.getCurrentItem();
-        if (current != null) current = ItemSanitizer.sanitize(current, plugin.getConfig());
-        e.setCursor(cursor);
-        e.setCurrentItem(current);
-        boolean cancel = false;
-        if (cursor != null && isBagItem(cursor)) cancel = true;
-        if (!cancel && current != null && isBagItem(current)) cancel = true;
-        if (!cancel && e.getClick() == ClickType.SWAP_OFFHAND) cancel = true;
-        if (cancel) {
+        if (cursor != null && isBagItem(cursor)) {
             e.setCancelled(true);
-            p.sendMessage(c("&c가방 안에 가방 아이템은 넣을 수 없습니다."));
+            p.sendMessage(c("&c가방 안에 가방을 넣을 수 없습니다."));
             return;
         }
-
-        if (plugin.getConfig().getBoolean("backpack.prevent-drop-while-open", true)) {
-            if (e.getClickedInventory() == p.getInventory()) {
-                if (e.isShiftClick()) e.setCancelled(true);
-                if (e.getClick() == ClickType.NUMBER_KEY) e.setCancelled(true);
+    } else if (e.getClickedInventory() == bottom) {
+        if (e.isShiftClick()) {
+            ItemStack current = e.getCurrentItem();
+            if (current != null && isBagItem(current)) {
+                e.setCancelled(true);
+                p.sendMessage(c("&c가방 안에 가방을 넣을 수 없습니다."));
+                return;
             }
         }
     }
+}
 
-    @EventHandler
-    public void onClose(InventoryCloseEvent e) {
-        if (!(e.getPlayer() instanceof Player)) return;
-        Player p = (Player) e.getPlayer();
-        String title = e.getView().getTitle();
-        String plain = ChatColor.stripColor(title);
-        if (plain != null && plain.startsWith("[개인가방]")) plugin.getStorage().saveAndClose(p);
-    }
-
-    @EventHandler
-    public void onDrop(PlayerDropItemEvent e) {
+public void onDrop(PlayerDropItemEvent e) {
         Player p = e.getPlayer();
         if (!plugin.getConfig().getBoolean("backpack.prevent-drop-while-open", true)) return;
         if (!plugin.getStorage().isOpen(p.getUniqueId())) return;
@@ -150,5 +148,21 @@ public class BackpackListener implements Listener {
             e.setCancelled(true);
             p.sendMessage(c("&c가방을 연 상태에서는 가방 아이템을 버릴 수 없습니다."));
         }
+    }
+}
+
+
+@EventHandler
+public void onDrag(InventoryDragEvent e) {
+    if (!(e.getWhoClicked() instanceof Player)) return;
+    Player p = (Player) e.getWhoClicked();
+    String title = e.getView().getTitle();
+    String plain = ChatColor.stripColor(title);
+    if (plain == null || !plain.startsWith("[개인가방]")) return;
+
+    ItemStack cursor = e.getOldCursor();
+    if (cursor != null && isBagItem(cursor)) {
+        e.setCancelled(true);
+        p.sendMessage(c("&c가방 안에 가방을 넣을 수 없습니다."));
     }
 }
