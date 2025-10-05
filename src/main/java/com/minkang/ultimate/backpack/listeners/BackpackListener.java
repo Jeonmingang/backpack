@@ -1,31 +1,58 @@
 package com.minkang.ultimate.backpack.listeners;
 
+
 import com.minkang.ultimate.backpack.BackpackPlugin;
+
 import com.minkang.ultimate.backpack.storage.PersonalStorage;
-import com.minkang.ultimate.backpack.util.ItemUtil;
+
 import com.minkang.ultimate.backpack.util.ItemSanitizer;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
-import org.bukkit.Sound;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.inventory.ClickType;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryDragEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
+
+import com.minkang.ultimate.backpack.util.ItemUtil;
 
 import java.util.List;
 
+
+import org.bukkit.ChatColor;
+
+import org.bukkit.Material;
+
+import org.bukkit.Sound;
+
+import org.bukkit.configuration.file.FileConfiguration;
+
+import org.bukkit.entity.Player;
+
+import org.bukkit.event.EventHandler;
+
+import org.bukkit.event.Listener;
+
+import org.bukkit.event.block.Action;
+
+import org.bukkit.event.inventory.ClickType;
+
+import org.bukkit.event.inventory.InventoryClickEvent;
+
+import org.bukkit.event.inventory.InventoryCloseEvent;
+
+import org.bukkit.event.inventory.InventoryDragEvent;
+
+import org.bukkit.event.player.PlayerDropItemEvent;
+
+import org.bukkit.event.player.PlayerInteractEvent;
+
+import org.bukkit.event.player.PlayerJoinEvent;
+
+import org.bukkit.inventory.EquipmentSlot;
+
+import org.bukkit.inventory.Inventory;
+
+import org.bukkit.inventory.ItemStack;
+
+import org.bukkit.inventory.ItemStack;
+
+
 public class BackpackListener implements Listener {
-    private final BackpackPlugin plugin;
+private final BackpackPlugin plugin;
     public BackpackListener(BackpackPlugin plugin) { this.plugin = plugin; }
     private String c(String s) { return ChatColor.translateAlternateColorCodes('&', s); }
 
@@ -100,22 +127,6 @@ public class BackpackListener implements Listener {
         }
     }
 
-    @EventHandler
-public void onClick(InventoryClickEvent e) {
-    if (!(e.getWhoClicked() instanceof Player)) return;
-    Player p = (Player) e.getWhoClicked();
-    String title = e.getView().getTitle();
-    String plain = ChatColor.stripColor(title);
-    if (plain == null || !plain.startsWith("[개인가방]")) return;
-
-    // 위험한 동작만 차단
-    if (e.getClick() == ClickType.SWAP_OFFHAND || 
-        e.getClick() == ClickType.DROP || e.getClick() == ClickType.CONTROL_DROP || 
-        e.getClick() == ClickType.MIDDLE || e.getClick() == ClickType.DOUBLE_CLICK) {
-        e.setCancelled(true);
-        return;
-    }
-
     Inventory top = e.getView().getTopInventory();
     Inventory bottom = e.getView().getBottomInventory();
 
@@ -151,6 +162,41 @@ public void onDrop(PlayerDropItemEvent e) {
     }
 }
 
+@EventHandler
+public void onClick(InventoryClickEvent e) {
+    if (!(e.getWhoClicked() instanceof Player)) return;
+    Player p = (Player) e.getWhoClicked();
+    String title = e.getView().getTitle();
+    String plain = ChatColor.stripColor(title);
+    if (plain == null || !plain.startsWith("[개인가방]")) return;
+
+    // 위험 동작 차단
+    ClickType ct = e.getClick();
+    if (ct == ClickType.SWAP_OFFHAND || ct == ClickType.DROP || ct == ClickType.CONTROL_DROP || ct == ClickType.MIDDLE || ct == ClickType.DOUBLE_CLICK) {
+        e.setCancelled(true);
+        return;
+    }
+
+    Inventory top = e.getView().getTopInventory();
+    Inventory bottom = e.getView().getBottomInventory();
+
+    // 가방 아이템을 가방 내부로 넣는 상황만 차단
+    if (e.getClickedInventory() == top) {
+        ItemStack cursor = e.getCursor();
+        if (cursor != null && isBagItem(cursor)) {
+            e.setCancelled(true);
+            return;
+        }
+    } else if (e.getClickedInventory() == bottom) {
+        if (e.isShiftClick()) {
+            ItemStack current = e.getCurrentItem();
+            if (current != null && isBagItem(current)) {
+                e.setCancelled(true);
+                return;
+            }
+        }
+    }
+}
 
 @EventHandler
 public void onDrag(InventoryDragEvent e) {
@@ -163,6 +209,7 @@ public void onDrag(InventoryDragEvent e) {
     ItemStack cursor = e.getOldCursor();
     if (cursor != null && isBagItem(cursor)) {
         e.setCancelled(true);
-        p.sendMessage(c("&c가방 안에 가방을 넣을 수 없습니다."));
     }
+}
+
 }
