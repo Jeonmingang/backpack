@@ -113,7 +113,7 @@ public class BackpackListener implements Listener {
         try {
             com.minkang.ultimate.backpack.storage.PersonalStorage storage = plugin.getStorage();
             plugin.getStorage().saveContents(p.getUniqueId(),
-                com.minkang.ultimate.backpack.util.ItemSanitizer.sanitize(contents, plugin.getConfig()));
+                contents /* no-sanitize */);
         } catch (Throwable t) {
             // swallow to prevent dupes/loss from event errors, log only
             plugin.getLogger().warning("[UltimateBackpack] 저장 중 오류: " + t.getMessage());

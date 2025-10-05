@@ -85,7 +85,8 @@ public class PersonalStorage {
         Inventory inv = Bukkit.createInventory(null, size, title);
         ItemStack[] contents = loadContents(id);
         if (contents != null) {
-            contents = ItemSanitizer.sanitize(contents, plugin.getConfig());
+            /* no-sanitize: keep meta intact */
+            // contents = ItemSanitizer.sanitize(contents, plugin.getConfig());
             inv.setContents(contents);
         }
         openInv.put(id, inv);
@@ -96,7 +97,7 @@ public class PersonalStorage {
         UUID id = p.getUniqueId();
         Inventory inv = openInv.get(id);
         if (inv != null) {
-            ItemStack[] safe = ItemSanitizer.sanitize(inv.getContents(), plugin.getConfig());
+            ItemStack[] safe = inv.getContents(); // no-sanitize
             saveContents(id, safe);
         }
         openInv.remove(id);
