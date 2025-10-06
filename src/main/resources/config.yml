@@ -27,7 +27,7 @@ ticket:
 
 sanitize:
   debug: false
-  enabled: true
+  enabled: false
   max-pdc-string-bytes: 32760   # 큰 문자열 PDC 제거(UTF 한계 고려)
   max-lore-line-chars: 512      # 너무 긴 로어 줄 자르기
   max-book-page-chars: 8192     # 책 페이지 과도 길이 자르기

@@ -113,7 +113,12 @@ public class PersonalStorage {
         return current;
     }
 
-    public Integer nextSize(int current) {
+    
+    public boolean isOpen(java.util.UUID id){
+        return openInv.containsKey(id);
+    }
+    
+public Integer nextSize(int current) {
         java.util.List<Integer> allowed = plugin.getConfig().getIntegerList("backpack.sizes-allowed");
         if (allowed == null || allowed.isEmpty()) allowed = java.util.Arrays.asList(9,18,27,36,45,54);
         java.util.Collections.sort(allowed);

@@ -112,7 +112,7 @@ public class BackpackListener implements Listener {
         // sanitize 후 저장
         try {
             com.minkang.ultimate.backpack.storage.PersonalStorage storage = plugin.getStorage();
-            if (storage.isOpen(p, inv)) {
+            if (storage.isOpen(p.getUniqueId())) {
                 storage.saveAndClose(p);
             } else {
                 // fallback: title-based check
