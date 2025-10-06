@@ -24,7 +24,6 @@ public class PersonalStorage {
         if (!dirPlayers.exists()) dirPlayers.mkdirs();
     }
 
-    public boolean isOpen(UUID playerId) { return openInv.containsKey(playerId); }
     private File file(UUID id) { return new File(dirPlayers, id.toString() + ".yml"); }
 
     public int getCurrentSize(UUID id) {
@@ -114,10 +113,12 @@ public class PersonalStorage {
     }
 
     
+    
+    // Canonical open-check: single UUID variant
     public boolean isOpen(java.util.UUID id){
         return openInv.containsKey(id);
     }
-    
+
 public Integer nextSize(int current) {
         java.util.List<Integer> allowed = plugin.getConfig().getIntegerList("backpack.sizes-allowed");
         if (allowed == null || allowed.isEmpty()) allowed = java.util.Arrays.asList(9,18,27,36,45,54);
