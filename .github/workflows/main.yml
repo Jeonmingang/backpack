@@ -1,4 +1,4 @@
-name: Java CI (UltimateBackpack, JDK 11)
+name: Java CI (UltimateBackpack, module=backpack)
 on:
   push: { branches: [ main, master ] }
   pull_request: { branches: [ main, master ] }
@@ -12,10 +12,6 @@ jobs:
           distribution: temurin
           java-version: '11'
           cache: 'maven'
-      - name: Show Java/Maven versions
-        run: |
-          java -version
-          mvn -v
       - name: Build
         run: |
           mvn -B -DskipTests -f backpack/pom.xml clean package
