@@ -1,4 +1,5 @@
 name: Java CI (UltimateBackpack, JDK 11)
+
 on:
   push: { branches: [ main, master ] }
   pull_request: { branches: [ main, master ] }
@@ -21,15 +22,48 @@ jobs:
           java -version
           mvn -v
 
-      - name: Build with Maven (module path)
+      - name: Locate pom.xml
+        id: locate
+        shell: bash
         run: |
-          mvn -B -DskipTests -f backpack-main/pom.xml clean package
+          set -e
+          # 최대 3단계까지 모듈 검색
+          MAP=$(find . -maxdepth 3 -type f -name pom.xml | sort)
+          echo "Found poms:"; echo "$MAP"
+          if [ -z "$MAP" ]; then
+            echo "No pom.xml found"; exit 1
+          fi
+          # 최상단(경로 길이 가장 짧은) 선택
+          POM=$(echo "$MAP" | awk '{ print length, $0 }' | sort -n | head -n1 | cut -d" " -f2-)
+          PROJ_DIR=$(dirname "$POM")
+          echo "POM=$POM"
+          echo "PROJ_DIR=$PROJ_DIR"
+          echo "pom=$POM" >> $GITHUB_OUTPUT
+          echo "projdir=$PROJ_DIR" >> $GITHUB_OUTPUT
+
+      - name: Force Maven toolchain to JAVA_HOME (JDK 11)
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/toolchains.xml <<'EOF'
+          <toolchains>
+            <toolchain>
+              <type>jdk</type>
+              <provides><version>11</version></provides>
+              <configuration><jdkHome>${JAVA_HOME}</jdkHome></configuration>
+            </toolchain>
+          </toolchains>
+          EOF
+
+      - name: Build with Maven
+        run: |
+          mvn -B -DskipTests -f "${{ steps.locate.outputs.pom }}" clean package
           echo "== JARs found =="
-          find backpack-main -maxdepth 3 -type f -name "*.jar" -print
+          find "${{ steps.locate.outputs.projdir }}" -maxdepth 3 -type f -name "*.jar" -print
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: UltimateBackpack-jar
-          path: backpack-main/target/*.jar
+          path: |
+            ${{ steps.locate.outputs.projdir }}/target/*.jar
           if-no-files-found: error
