@@ -11,6 +11,11 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.block.Action;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
@@ -40,6 +45,40 @@ public class BackpackListener implements Listener {
         return !display.isEmpty() && display.equalsIgnoreCase(cfgName);
     }
 
+    
+    @EventHandler
+    public void onUse(PlayerInteractEvent e){
+        Action a = e.getAction();
+        if (!(a == Action.RIGHT_CLICK_AIR || a == Action.RIGHT_CLICK_BLOCK)) return;
+        if (e.getHand() != EquipmentSlot.HAND) return; // 메인핸드만 처리
+        Player p = e.getPlayer();
+        ItemStack it = e.getItem();
+        if (it == null || it.getType() == Material.AIR) return;
+        ItemMeta m = it.getItemMeta();
+        if (m == null) return;
+        PersistentDataContainer pdc = m.getPersistentDataContainer();
+        String tag = pdc.get(plugin.getKeyTicket(), PersistentDataType.STRING);
+        if (tag == null) return; // 확장권 아님
+
+        int current = plugin.getStorage().getCurrentSize(p.getUniqueId());
+        Integer target = null;
+        if (tag.startsWith("size:")) {
+            try { target = Integer.parseInt(tag.substring(5)); } catch (NumberFormatException ignored) {}
+            if (target != null) target = plugin.getStorage().nearestAllowed(target);
+        } else {
+            target = plugin.getStorage().nextSize(current);
+        }
+
+        if (target == null) { p.sendMessage(cc("&c더 이상 확장할 수 없습니다.")); e.setCancelled(true); return; }
+        if (target <= current) { p.sendMessage(cc("&c이미 해당 크기 이상입니다. 현재: &e" + current)); e.setCancelled(true); return; }
+
+        plugin.getStorage().setCurrentSize(p.getUniqueId(), target);
+        // 1장 소모
+        it.setAmount(it.getAmount() - 1);
+        p.sendMessage(cc("&a가방 크기가 &e" + current + " &7→ &e" + target + " &a로 확장되었습니다."));
+        e.setCancelled(true);
+    }
+    
     @EventHandler
     public void onClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player)) return;

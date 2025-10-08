@@ -104,7 +104,17 @@ public class BagCommand implements CommandExecutor {
             Material mat; try { mat = Material.valueOf(matStr); } catch (IllegalArgumentException ex) { mat = Material.PAPER; }
             String name = cfg.getString("ticket.display-name", "&d가방 확장권");
             List<String> lore = cfg.getStringList("ticket.lore");
-            ItemStack it = ItemUtil.buildTaggedItem(mat, name, lore, plugin.getKeyTicket(), "1");
+            String sizeArg = "next";
+            if (args.length >= 4) {
+                try {
+                    int specified = Integer.parseInt(args[3]);
+                    int[] allowedArr = new int[]{9,18,27,36,45,54};
+                    boolean ok=false; for(int v:allowedArr){ if (v==specified) { ok=true; break; } }
+                    if (ok) sizeArg = "size:" + specified;
+                } catch (NumberFormatException ignored) {}
+            }
+            ItemStack it = ItemUtil.buildTaggedItem(mat, name, lore, plugin.getKeyTicket(), (sizeArg);
+
             it.setAmount(amount);
             t.getInventory().addItem(it);
             sender.sendMessage(c("&a확장권 지급: &7" + t.getName() + " x" + amount));
