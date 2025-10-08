@@ -1,25 +1,56 @@
-name: Java CI (UltimateBackpack, module=backpack)
+name: Java CI (UltimateBackpack, autodetect)
+
 on:
   push: { branches: [ main, master ] }
   pull_request: { branches: [ main, master ] }
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+
+      - name: Setup Temurin JDK 11
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '11'
           cache: 'maven'
+
+      - name: Locate pom.xml
+        id: locate
+        run: |
+          set -e
+          MAP=$(find . -maxdepth 3 -type f -name pom.xml | sort)
+          echo "Found poms:"; echo "$MAP"
+          [ -z "$MAP" ] && { echo "No pom.xml found"; exit 1; }
+          POM=$(echo "$MAP" | awk '{ print length, $0 }' | sort -n | head -n1 | cut -d" " -f2-)
+          PROJ_DIR=$(dirname "$POM")
+          echo "pom=$POM" >> $GITHUB_OUTPUT
+          echo "projdir=$PROJ_DIR" >> $GITHUB_OUTPUT
+
+      - name: Force Maven toolchain to JDK 11
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/toolchains.xml <<'EOF'
+          <toolchains>
+            <toolchain>
+              <type>jdk</type>
+              <provides><version>11</version></provides>
+              <configuration><jdkHome>${JAVA_HOME}</jdkHome></configuration>
+            </toolchain>
+          </toolchains>
+          EOF
+
       - name: Build
         run: |
-          mvn -B -DskipTests -f backpack/pom.xml clean package
+          mvn -B -DskipTests -f "${{ steps.locate.outputs.pom }}" clean package
           echo "== JARs =="
-          find backpack -maxdepth 3 -type f -name "*.jar" -print
+          find "${{ steps.locate.outputs.projdir }}" -maxdepth 3 -type f -name "*.jar" -print
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: UltimateBackpack-jar
-          path: backpack/target/*.jar
+          path: ${{ steps.locate.outputs.projdir }}/target/*.jar
           if-no-files-found: error
