@@ -15,34 +15,45 @@ public class BackpackPlugin extends JavaPlugin {
     private NamespacedKey keyBag;
     private NamespacedKey keyTicket;
     private NamespacedKey keyBagFlag;
+
     private PersonalStorage storage;
     private PageStore pagerStore;
 
     public static BackpackPlugin getInstance() { return instance; }
     public NamespacedKey getKeyBag() { return keyBag; }
     public NamespacedKey getKeyTicket() { return keyTicket; }
+    public NamespacedKey getKeyBagFlag() { return keyBagFlag; }
     public PersonalStorage getStorage() { return storage; }
+    public PageStore getPagerStore(){ return pagerStore; }
 
     @Override
     public void onEnable() {
         instance = this;
         saveDefaultConfig();
+
+        // Initialize all NamespacedKey(s)
         keyBag = new NamespacedKey(this, "bag");
         keyTicket = new NamespacedKey(this, "ticket");
+        keyBagFlag = new NamespacedKey(this, "bag_item_flag"); // <-- fix: was null
+
+        // Init services
         storage = new PersonalStorage(this);
+        pagerStore = new PageStore(this); // <-- fix: was never constructed
+
+        // Listeners + commands
         getServer().getPluginManager().registerEvents(new BackpackListener(this), this);
         getServer().getPluginManager().registerEvents(new PagerListener(this, pagerStore), this);
         getServer().getPluginManager().registerEvents(new CommandInterceptor(this, pagerStore), this);
-        if (getCommand("가방") != null) getCommand("가방").setExecutor(new BagCommand(this));
-        getLogger().info("[UltimateBackpack v1.2.0] Enabled (Korean commands + /가방 설정).");
+
+        if (getCommand("가방") != null) {
+            getCommand("가방").setExecutor(new BagCommand(this));
+        }
+
+        getLogger().info("[UltimateBackpack v1.4.1] Enabled (pager + right-click bag item fixes).");
     }
 
     @Override
     public void onDisable() {
-        getLogger().info("[UltimateBackpack v1.2.0] Disabled.");
+        getLogger().info("[UltimateBackpack v1.4.1] Disabled.");
     }
-
-    public PageStore getPagerStore(){ return pagerStore; }
-
-    public org.bukkit.NamespacedKey getKeyBagFlag(){ return keyBagFlag; }
 }
