@@ -1,62 +1,12 @@
-# UltimateBackpack v1.2.0
-backpack:
-  sizes-allowed: [9, 18, 27, 36, 45, 54]
-  starter-size: 9
-  max-size: 54
-  title-format: "&6[개인가방] &e%player% &7(%size%)"
-  open-sound: "BLOCK_CHEST_OPEN"
-  blocked-worlds: []
-  prevent-drop-while-open: true
-  allow-command-open: true
-  default-world: "bskyblock_world"
-starter-item:
-  give-on-first-join: false
-  material: "CHEST"
-  display-name: "&6가방"
-  lore:
-    - "&7우클릭으로 개인 가방 열기"
-    - "&8(아이템 분실해도 보관내용은 유지)"
-  match-by-name: false
+
+# Ticket detection (fallbacks if host plugin doesn't set a PDC tag)
 ticket:
-  material: "PAPER"
-  display-name: "&d가방 확장권"
-  lore:
-    - "&7사용 시 다음 단계로 가방 크기 확장"
-    - "&8최대: 54칸"
+  name: "&e가방 확장권"
+  lore-contains:
+    - "&77칸씩 확장"
+    - "&79칸 페이지 생성"
+  pdc-keys:
+    - "ultimate:bag_ticket"   # 예: 네임스페이스:key 형식
 
-
-sanitize:
-  debug: false
-  enabled: false
-  max-pdc-string-bytes: 32760   # 큰 문자열 PDC 제거(UTF 한계 고려)
-  max-lore-line-chars: 512      # 너무 긴 로어 줄 자르기
-  max-book-page-chars: 8192     # 책 페이지 과도 길이 자르기
-
-
-# ─────────────────────────────────────────────────────────
-# 페이지 가방(2페이지 이상) 타이틀
 pager:
   title: "&6가방 &7(Page {page})"
-
-# samItemEnchant 강화서 차단 키워드/PDC
-scroll-block:
-  list: ["강화서", "강화 주문서", "ENCHANT PAPER"]
-  pdc:  ["PAPER_ID", "ENCHANT"]
-
-# 확장권 설명 로어(자동 병합됨, 보기 좋게 안내)
-ticket-extra-lore:
-  - "&8――――――――――――――――――――"
-  - "&7메인 가방이 &f54칸 &7이면,"
-  - "&7&f[웅크리고] &7확장권을 사용해"
-  - "&7페이지 &f2 &7부터 &f9→18→27→…→54&7로"
-  - "&7순차 확장됩니다."
-  - "&8(Q=다음, F=이전 페이지)"
-
-
-# 전용 가방 아이템(지급용) 기본 설정
-bag-item:
-  material: "PAPER"
-  display-name: "&6가방 전용 아이템"
-  lore:
-    - "&8사용법: &7허공에 우클릭 → 본인 가방 열기"
-    - "&8Tip: &7/가방 열기 <페이지>"

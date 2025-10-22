@@ -1,7 +1,7 @@
 
 name: UltimateBackpack
 main: com.minkang.ultimate.backpack.BackpackPlugin
-version: 1.4.3
+version: 1.4.4
 api-version: 1.16
 author: Mingang
 commands:
