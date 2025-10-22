@@ -14,53 +14,53 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class PagerListener implements Listener {
-
     private final JavaPlugin plugin;
     private final Compat compat;
 
-    // Original 1-arg constructor (kept)
     public PagerListener(JavaPlugin plugin){
         this.plugin = plugin;
         this.compat = new Compat(plugin);
     }
-
-    // NEW overloaded 2-arg constructor to keep backward compatibility with existing onEnable code:
-    // BackpackPlugin + PageStore (we don't need the PageStore reference, Compat handles it via reflection)
+    // Overload for old code: new PagerListener(this, pageStore)
     public PagerListener(com.minkang.ultimate.backpack.BackpackPlugin plugin,
                          com.minkang.ultimate.backpack.pager.PageStore store){
         this((JavaPlugin) plugin);
-        // no direct use of `store`; Compat will call host's pager via reflection
     }
 
     private String cc(String s){ return ChatColor.translateAlternateColorCodes('&', s==null?"":s); }
 
     private boolean isTicket(ItemStack it){
-        if (it == null) return false;
+        if (it==null) return false;
+        ItemMeta m = it.getItemMeta(); if (m==null) return false;
+        // Name exact/contains
+        String expect = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("ticket.name",""));
+        if (m.hasDisplayName()){
+            String dn = m.getDisplayName();
+            if (expect.length()>0 && ChatColor.stripColor(dn).equalsIgnoreCase(ChatColor.stripColor(expect))) return true;
+            for (String kw: plugin.getConfig().getStringList("ticket.name-keywords")){
+                String t = ChatColor.translateAlternateColorCodes('&', kw);
+                if (ChatColor.stripColor(dn).toLowerCase().contains(ChatColor.stripColor(t).toLowerCase())) return true;
+            }
+        }
+        if (m.hasLore()){
+            for (String need: plugin.getConfig().getStringList("ticket.lore-contains")){
+                String t = ChatColor.translateAlternateColorCodes('&', need);
+                for (String line: m.getLore()){
+                    if (ChatColor.stripColor(line).toLowerCase().contains(ChatColor.stripColor(t).toLowerCase())) return true;
+                }
+            }
+        }
+        for (org.bukkit.NamespacedKey nk : m.getPersistentDataContainer().getKeys()){
+            for (String raw: plugin.getConfig().getStringList("ticket.pdc-keys")){
+                if (raw == null || raw.isEmpty()) continue;
+                String full = nk.getNamespace()+":"+nk.getKey();
+                if (full.equalsIgnoreCase(raw) || nk.getKey().equalsIgnoreCase(raw)) return true;
+            }
+        }
         try {
-            ItemMeta m = it.getItemMeta();
-            if (m == null) return false;
-            String expect = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("ticket.name",""));
-            if (m.hasDisplayName() && expect.length()>0 && ChatColor.stripColor(m.getDisplayName()).equalsIgnoreCase(ChatColor.stripColor(expect))) return true;
-            if (m.hasLore()){
-                for (String needle: plugin.getConfig().getStringList("ticket.lore-contains")){
-                    String t = ChatColor.translateAlternateColorCodes('&', needle);
-                    for (String line: m.getLore()){
-                        if (ChatColor.stripColor(line).contains(ChatColor.stripColor(t))) return true;
-                    }
-                }
-            }
-            for (org.bukkit.NamespacedKey nk: m.getPersistentDataContainer().getKeys()){
-                for (String raw: plugin.getConfig().getStringList("ticket.pdc-keys")){
-                    if (raw == null || raw.isEmpty()) continue;
-                    String full = nk.getNamespace()+":"+nk.getKey();
-                    if (full.equalsIgnoreCase(raw) || nk.getKey().equalsIgnoreCase(raw)) return true;
-                }
-            }
-            try {
-                org.bukkit.NamespacedKey ticketKey = (org.bukkit.NamespacedKey) plugin.getClass().getMethod("getKeyTicket").invoke(plugin);
-                if (ticketKey != null && m.getPersistentDataContainer().has(ticketKey, org.bukkit.persistence.PersistentDataType.STRING)) return true;
-            } catch (Throwable ignored) {}
-        } catch (Throwable ignored){}
+            org.bukkit.NamespacedKey ticketKey = (org.bukkit.NamespacedKey) plugin.getClass().getMethod("getKeyTicket").invoke(plugin);
+            if (ticketKey != null && m.getPersistentDataContainer().has(ticketKey, org.bukkit.persistence.PersistentDataType.STRING)) return true;
+        } catch(Throwable ignored){}
         return false;
     }
 

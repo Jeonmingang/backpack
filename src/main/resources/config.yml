@@ -1,12 +1,18 @@
 
-# Ticket detection (fallbacks if host plugin doesn't set a PDC tag)
 ticket:
   name: "&e가방 확장권"
+  # Display name keywords that also count as a ticket (fallback)
+  name-keywords:
+    - "확장권"
+    - "ticket"
+    - "bag"
+  # Any lore line containing one of the following (after color-strip) makes it a ticket
   lore-contains:
-    - "&77칸씩 확장"
-    - "&79칸 페이지 생성"
+    - "9칸"
+    - "확장"
+  # Optional PDC keys that also mark tickets
   pdc-keys:
-    - "ultimate:bag_ticket"   # 예: 네임스페이스:key 형식
+    - "ultimate:bag_ticket"
 
 pager:
   title: "&6가방 &7(Page {page})"
