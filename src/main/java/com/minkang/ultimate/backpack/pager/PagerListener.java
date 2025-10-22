@@ -62,8 +62,8 @@ public class PagerListener implements Listener {
     @EventHandler
     public void onOpenWithBagItem(PlayerInteractEvent e){
         // Right-click with a designated "bag item" opens page 1
-        org.bukkit.event.block.Action a = e.getAction();
-        if (a != org.bukkit.event.block.Action.RIGHT_CLICK_AIR && a != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) return;
+        org.bukkit.event.block.Action action = e.getAction();
+        if (action != org.bukkit.event.block.Action.RIGHT_CLICK_AIR && action != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) return;
 
         ItemStack it = e.getItem();
         if (it == null || it.getType().isAir()) return;
@@ -77,9 +77,9 @@ public class PagerListener implements Listener {
                 // Legacy compatibility: match display-name from config
                 String cfg = plugin.getConfig().getString("starter-item.display-name", "&6가방");
                 String display = it.getItemMeta().hasDisplayName() ? it.getItemMeta().getDisplayName() : "";
-                String a = org.bukkit.ChatColor.stripColor(org.bukkit.ChatColor.translateAlternateColorCodes('&', cfg));
-                String b = org.bukkit.ChatColor.stripColor(display);
-                if (!a.isEmpty() && a.equalsIgnoreCase(b)) {
+                String cfgName = org.bukkit.ChatColor.stripColor(org.bukkit.ChatColor.translateAlternateColorCodes('&', cfg));
+                String dispName = org.bukkit.ChatColor.stripColor(display);
+                if (!cfgName.isEmpty() && cfgName.equalsIgnoreCase(dispName)) {
                     open = true;
                 }
             }
