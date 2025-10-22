@@ -31,7 +31,6 @@ public class PagerListener implements Listener {
         return plainTitle.contains(probe.trim());
     }
 
-    // ---- scroll-block helpers (same as BackpackListener) ----
     private boolean containsAny(String txt, java.util.List<String> needles){
         if (txt == null) return false;
         String s = org.bukkit.ChatColor.stripColor(txt).toLowerCase();
@@ -81,7 +80,6 @@ public class PagerListener implements Listener {
         int page = store.getOpenPage(p);
         if (page < 2 && !isBackpackTitle(e.getView().getTitle())) return;
 
-        // Q/F navigation
         if (e.getClick() == ClickType.DROP){
             e.setCancelled(true);
             String title = plugin.getConfig().getString("pager.title", "&6가방 &7(Page {page})");
@@ -95,7 +93,6 @@ public class PagerListener implements Listener {
             return;
         }
 
-        // Scroll-block when moving from player inv -> top (pager)
         if (e.getClickedInventory() == e.getView().getBottomInventory()){
             if (e.isShiftClick()){
                 if (isBlockedScroll(e.getCurrentItem())) { e.setCancelled(true); p.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&',"&c이 아이템은 가방에 넣을 수 없습니다.")); }
