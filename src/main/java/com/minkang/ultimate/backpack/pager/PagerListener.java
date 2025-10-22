@@ -68,12 +68,25 @@ public class PagerListener implements Listener {
         ItemStack it = e.getItem();
         if (it == null || it.getType().isAir()) return;
 
+        boolean open = false;
         if (it.hasItemMeta()){
             PersistentDataContainer pdc = it.getItemMeta().getPersistentDataContainer();
             if (plugin.getKeyBagFlag() != null && pdc.has(plugin.getKeyBagFlag(), PersistentDataType.BYTE)){
-                e.setCancelled(true);
-                plugin.getStorage().open(e.getPlayer());
+                open = true; // new PDC-based item
+            } else {
+                // Legacy compatibility: match display-name from config
+                String cfg = plugin.getConfig().getString("starter-item.display-name", "&6가방");
+                String display = it.getItemMeta().hasDisplayName() ? it.getItemMeta().getDisplayName() : "";
+                String a = org.bukkit.ChatColor.stripColor(org.bukkit.ChatColor.translateAlternateColorCodes('&', cfg));
+                String b = org.bukkit.ChatColor.stripColor(display);
+                if (!a.isEmpty() && a.equalsIgnoreCase(b)) {
+                    open = true;
+                }
             }
+        }
+        if (open){
+            e.setCancelled(true);
+            plugin.getStorage().open(e.getPlayer());
         }
     }
 }

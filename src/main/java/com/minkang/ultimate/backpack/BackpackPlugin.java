@@ -38,7 +38,7 @@ public class BackpackPlugin extends JavaPlugin {
 
         // Init services
         storage = new PersonalStorage(this);
-        pagerStore = new PageStore(this); // <-- fix: was never constructed
+        pagerStore = new PageStore(getDataFolder()); // <-- fix: was never constructed
 
         // Listeners + commands
         getServer().getPluginManager().registerEvents(new BackpackListener(this), this);
