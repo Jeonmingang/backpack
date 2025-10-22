@@ -18,9 +18,18 @@ public class PagerListener implements Listener {
     private final JavaPlugin plugin;
     private final Compat compat;
 
+    // Original 1-arg constructor (kept)
     public PagerListener(JavaPlugin plugin){
         this.plugin = plugin;
         this.compat = new Compat(plugin);
+    }
+
+    // NEW overloaded 2-arg constructor to keep backward compatibility with existing onEnable code:
+    // BackpackPlugin + PageStore (we don't need the PageStore reference, Compat handles it via reflection)
+    public PagerListener(com.minkang.ultimate.backpack.BackpackPlugin plugin,
+                         com.minkang.ultimate.backpack.pager.PageStore store){
+        this((JavaPlugin) plugin);
+        // no direct use of `store`; Compat will call host's pager via reflection
     }
 
     private String cc(String s){ return ChatColor.translateAlternateColorCodes('&', s==null?"":s); }
@@ -28,7 +37,6 @@ public class PagerListener implements Listener {
     private boolean isTicket(ItemStack it){
         if (it == null) return false;
         try {
-            // reuse BackpackListener logic via display name/lore/PDC keys from config
             ItemMeta m = it.getItemMeta();
             if (m == null) return false;
             String expect = ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("ticket.name",""));
@@ -41,7 +49,6 @@ public class PagerListener implements Listener {
                     }
                 }
             }
-            // PDC keys
             for (org.bukkit.NamespacedKey nk: m.getPersistentDataContainer().getKeys()){
                 for (String raw: plugin.getConfig().getStringList("ticket.pdc-keys")){
                     if (raw == null || raw.isEmpty()) continue;
@@ -61,7 +68,6 @@ public class PagerListener implements Listener {
     public void onPagerClick(InventoryClickEvent e){
         Inventory top = e.getView().getTopInventory();
         if (top == null) return;
-        // Only handle clicks when the user right-clicks inside the top inventory with a ticket on cursor
         if (e.getClickedInventory() != top) return;
 
         ClickType ct = e.getClick();
@@ -77,7 +83,6 @@ public class PagerListener implements Listener {
         int sizeNow = compat.getPageSize(p.getUniqueId(), pageNow, 9);
 
         if (ct == ClickType.RIGHT){
-            // grow current page by 9 until 54
             int target = Math.min(54, ((sizeNow/9)+1)*9);
             if (target <= sizeNow){
                 p.sendMessage(cc("&c이미 최대 크기입니다. (&e"+sizeNow+"칸&c)"));
@@ -91,7 +96,6 @@ public class PagerListener implements Listener {
             return;
         }
 
-        // SHIFT_RIGHT: create next page only if current page is already 54
         if (sizeNow < 54){
             p.sendMessage(cc("&c먼저 현재 페이지를 54칸까지 확장하세요."));
             return;
