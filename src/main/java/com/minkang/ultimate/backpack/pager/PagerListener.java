@@ -130,7 +130,6 @@ public class PagerListener implements Listener {
                 int sizeNow = store.getPageSize(pp.getUniqueId(), pageNow, 9);
                 if (ct == ClickType.SHIFT_RIGHT){
                     if (sizeNow >= 54){
-                        // open next page with 9
                         int nextPage = Math.max(2, pageNow+1);
                         store.setPageSize(pp.getUniqueId(), nextPage, 9);
                         String title = plugin.getConfig().getString("pager.title", "&6가방 &7(Page {page})");
@@ -138,6 +137,18 @@ public class PagerListener implements Listener {
                         if (e.getCursor().getAmount() > 0) e.getCursor().setAmount(e.getCursor().getAmount()-1);
                         pp.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&',"&a" + nextPage + "페이지가 &e9칸&a으로 생성되었습니다."));
                     } else {
+                        Integer target = plugin.getStorage().nearestAllowed(sizeNow+9);
+                        if (target != null && target > sizeNow && target <= 54){
+                            store.setPageSize(pp.getUniqueId(), pageNow, target);
+                            String title = plugin.getConfig().getString("pager.title", "&6가방 &7(Page {page})");
+                            store.openPage(pp, pageNow, title);
+                            if (e.getCursor().getAmount() > 0) e.getCursor().setAmount(e.getCursor().getAmount()-1);
+                            pp.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&',"&a페이지 크기: &e" + sizeNow + " &7→ &e" + target));
+                        } else {
+                            pp.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&',"&c더 이상 확장할 수 없습니다."));
+                        }
+                    }
+                } else {
                         // shift-right while not full: treat as normal increment
                         Integer target = plugin.getStorage().nearestAllowed(sizeNow+9);
                         if (target != null && target > sizeNow && target <= 54){

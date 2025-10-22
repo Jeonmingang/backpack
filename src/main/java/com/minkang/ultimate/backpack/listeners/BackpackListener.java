@@ -206,4 +206,13 @@ public class BackpackListener implements Listener {
             }
         }
     }
+
+    @org.bukkit.event.EventHandler
+    public void onMainClose(org.bukkit.event.inventory.InventoryCloseEvent e){
+        if (e.getPlayer() instanceof org.bukkit.entity.Player){
+            // 안전: 가방이 아닐 경우 openInv에서 null -> 저장 안함
+            plugin.getStorage().saveAndClose((org.bukkit.entity.Player)e.getPlayer());
+        }
+    }
+    
 }

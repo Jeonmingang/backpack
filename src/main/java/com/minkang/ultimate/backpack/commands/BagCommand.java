@@ -13,6 +13,34 @@ import java.util.Arrays;
 import java.util.List;
 
 public class BagCommand implements CommandExecutor {
+    private org.bukkit.inventory.ItemStack makeBagItem(int amount){
+        org.bukkit.configuration.file.FileConfiguration cfg = plugin.getConfig();
+        String matStr = cfg.getString("bag-item.material", "CHEST");
+        org.bukkit.Material mat;
+        try { mat = org.bukkit.Material.valueOf(matStr); } catch (IllegalArgumentException ex) { mat = org.bukkit.Material.CHEST; }
+        String name = cfg.getString("bag-item.display-name", "&6휴대용 가방");
+        java.util.List<String> lore = cfg.getStringList("bag-item.lore");
+        if (lore == null || lore.isEmpty()){
+            lore = java.util.Arrays.asList(
+                "&7우클릭: &f메인가방 열기",
+                "&7쉬프트+우클릭: &f(메인 54칸 달성 시) 2페이지 열기",
+                "&7확장권: &f가방 GUI에서 우클릭으로 확장, 쉬프트+우클릭으로 다음 페이지 생성"
+            );
+        }
+        org.bukkit.inventory.ItemStack it = new org.bukkit.inventory.ItemStack(mat);
+        org.bukkit.inventory.meta.ItemMeta im = it.getItemMeta();
+        if (im != null){
+            im.setDisplayName(org.bukkit.ChatColor.translateAlternateColorCodes('&', name));
+            java.util.List<String> colored = new java.util.ArrayList<>();
+            for (String ln : lore) colored.add(org.bukkit.ChatColor.translateAlternateColorCodes('&', ln));
+            im.setLore(colored);
+            im.getPersistentDataContainer().set(plugin.getKeyBagFlag(), org.bukkit.persistence.PersistentDataType.BYTE, (byte)1);
+            it.setItemMeta(im);
+        }
+        it.setAmount(Math.max(1, amount));
+        return it;
+    }
+    
 
     private static final int MAX_MAIN_SIZE = 54;
     private static final List<Integer> ALLOWED = Arrays.asList(9,18,27,36,45,54);
@@ -124,15 +152,25 @@ public class BagCommand implements CommandExecutor {
 
         if (sub.equalsIgnoreCase("아이템")){
             if (!(sender.isOp() || sender.hasPermission("ultimatebackpack.admin"))) { sender.sendMessage(c("&c권한이 없습니다.")); return true; }
-            if (!(sender instanceof Player)) { sender.sendMessage("플레이어만 사용 가능합니다."); return true; }
-            Player p = (Player) sender;
+            if (!(sender instanceof org.bukkit.entity.Player)) { sender.sendMessage("플레이어만 사용 가능합니다."); return true; }
+            org.bukkit.entity.Player p = (org.bukkit.entity.Player) sender;
             org.bukkit.inventory.ItemStack hand = p.getInventory().getItemInMainHand();
-            if (hand == null || hand.getType() == Material.AIR){ sender.sendMessage(c("&c손에 든 아이템이 없습니다.")); return true; }
-            org.bukkit.inventory.meta.ItemMeta meta = hand.getItemMeta();
-            if (meta == null){ sender.sendMessage(c("&c이 아이템은 표시 이름을 설정할 수 없습니다.")); return true; }
-            meta.getPersistentDataContainer().set(plugin.getKeyBagFlag(), org.bukkit.persistence.PersistentDataType.BYTE, (byte)1);
-            hand.setItemMeta(meta);
-            sender.sendMessage(c("&a전용 가방 아이템으로 설정 완료."));
+            if (hand == null || hand.getType() == org.bukkit.Material.AIR){ sender.sendMessage(c("&c손에 든 아이템이 없습니다.")); return true; }
+            // apply bag flag + name/lore
+            org.bukkit.inventory.ItemStack template = makeBagItem(1);
+            org.bukkit.inventory.meta.ItemMeta src = template.getItemMeta();
+            if (src != null){
+                org.bukkit.inventory.meta.ItemMeta meta = hand.getItemMeta();
+                if (meta != null){
+                    meta.setDisplayName(src.getDisplayName());
+                    meta.setLore(src.getLore());
+                    meta.getPersistentDataContainer().set(plugin.getKeyBagFlag(), org.bukkit.persistence.PersistentDataType.BYTE, (byte)1);
+                    hand.setItemMeta(meta);
+                    sender.sendMessage(c("&a손 아이템을 가방 아이템으로 설정하고 이름/로어를 적용했습니다."));
+                } else {
+                    sender.sendMessage(c("&c이 아이템은 메타데이터를 변경할 수 없습니다."));
+                }
+            }
             return true;
         }
 
@@ -148,6 +186,17 @@ public class BagCommand implements CommandExecutor {
             if (page <= 1){ plugin.getStorage().setCurrentSize(t.getUniqueId(), size); }
             else { plugin.getPagerStore().setPageSize(t.getUniqueId(), page, size); }
             sender.sendMessage(c("&a설정 완료: &f" + t.getName() + " &7페이지 &e" + page + " &7→ &e" + size));
+            return true;
+        }
+        if (sub.equalsIgnoreCase("지급")){
+            if (!(sender.isOp() || sender.hasPermission("ultimatebackpack.admin"))) { sender.sendMessage(c("&c권한이 없습니다.")); return true; }
+            if (args.length < 3){ sender.sendMessage(c("&c사용법: /가방 지급 <닉> <갯수>")); return true; }
+            org.bukkit.entity.Player t = org.bukkit.Bukkit.getPlayerExact(args[1]);
+            if (t == null){ sender.sendMessage(c("&c해당 플레이어를 찾을 수 없습니다.")); return true; }
+            int amount = 1; try { amount = Integer.parseInt(args[2]); } catch (Exception ex) {}
+            org.bukkit.inventory.ItemStack it = makeBagItem(amount);
+            t.getInventory().addItem(it);
+            sender.sendMessage(c("&a가방 아이템 지급 완료: &f" + t.getName() + " &7x" + amount));
             return true;
         }
 
