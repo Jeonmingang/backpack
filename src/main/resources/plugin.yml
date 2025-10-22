@@ -9,5 +9,5 @@ commands:
     aliases: [backpack, bag, 백팩]
 permissions:
   ultimatebackpack.admin:
-    description: 운영자 권한(지급/크기/리로드/설정)
+    description: 운영자 권한(지급/크기/리로드/설정/아이템)
     default: op
