@@ -2,7 +2,6 @@ package com.minkang.ultimate.backpack.storage;
 
 import com.minkang.ultimate.backpack.BackpackPlugin;
 import com.minkang.ultimate.backpack.util.InventorySerializer;
-import com.minkang.ultimate.backpack.util.ItemSanitizer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -36,38 +35,27 @@ public class PersonalStorage {
 
     public void setCurrentSize(UUID id, int size) {
         File f = file(id);
-        YamlConfiguration y = YamlConfiguration.loadConfiguration(f);
+        YamlConfiguration y = f.exists() ? YamlConfiguration.loadConfiguration(f) : new YamlConfiguration();
         y.set("size", size);
-        try { y.save(f); } catch (Exception ignored) {}
-    }
-
-    public boolean isStarterGiven(UUID id) {
-        File f = file(id);
-        if (!f.exists()) return false;
-        YamlConfiguration y = YamlConfiguration.loadConfiguration(f);
-        return y.getBoolean("starterGiven", false);
-    }
-
-    public void markStarterGiven(UUID id) {
-        File f = file(id);
-        YamlConfiguration y = YamlConfiguration.loadConfiguration(f);
-        y.set("starterGiven", true);
         try { y.save(f); } catch (Exception ignored) {}
     }
 
     public ItemStack[] loadContents(UUID id) {
         File f = file(id);
         if (!f.exists()) return null;
-        YamlConfiguration y = YamlConfiguration.loadConfiguration(f);
-        String data = y.getString("data");
-        if (data == null || data.isEmpty()) return null;
-        try { return InventorySerializer.itemStackArrayFromBase64(data); }
-        catch (Exception e) { plugin.getLogger().warning("개인가방 로드 실패: " + e.getMessage()); return null; }
+        try {
+            String data = YamlConfiguration.loadConfiguration(f).getString("data", null);
+            if (data == null) return null;
+            return InventorySerializer.itemStackArrayFromBase64(data);
+        } catch (Exception e) {
+            plugin.getLogger().warning("개인가방 불러오기 실패: " + e.getMessage());
+            return null;
+        }
     }
 
     public void saveContents(UUID id, ItemStack[] contents) {
         File f = file(id);
-        YamlConfiguration y = YamlConfiguration.loadConfiguration(f);
+        YamlConfiguration y = f.exists() ? YamlConfiguration.loadConfiguration(f) : new YamlConfiguration();
         try {
             String data = InventorySerializer.itemStackArrayToBase64(contents);
             y.set("data", data);
@@ -77,15 +65,16 @@ public class PersonalStorage {
 
     public void open(Player p) {
         UUID id = p.getUniqueId();
-        int size = nearestAllowed(getCurrentSize(id));
+        int size = getCurrentSize(id);
+        size = nearestAllowed(size);
         setCurrentSize(id, size);
-        String title = plugin.getConfig().getString("backpack.title-format", "&6[개인가방] &e%player% &7(%size%)");
-        title = ChatColor.translateAlternateColorCodes('&', title).replace("%player%", p.getName()).replace("%size%", String.valueOf(size));
+        String fmt = plugin.getConfig().getString("backpack.title-format", "&6[개인가방] &e%player% &7(%size%)");
+        String title = ChatColor.translateAlternateColorCodes('&', fmt)
+                .replace("%player%", p.getName())
+                .replace("%size%", String.valueOf(size));
         Inventory inv = Bukkit.createInventory(null, size, title);
         ItemStack[] contents = loadContents(id);
         if (contents != null) {
-            /* no-sanitize: keep meta intact */
-            // contents = ItemSanitizer.sanitize(contents, plugin.getConfig());
             inv.setContents(contents);
         }
         openInv.put(id, inv);
@@ -94,36 +83,28 @@ public class PersonalStorage {
 
     public void saveAndClose(Player p) {
         UUID id = p.getUniqueId();
-        Inventory inv = openInv.get(id);
+        Inventory inv = openInv.remove(id);
         if (inv != null) {
-            ItemStack[] safe = inv.getContents(); // no-sanitize
-            saveContents(id, safe);
+            saveContents(id, inv.getContents());
         }
-        openInv.remove(id);
     }
 
-    public int nearestAllowed(int current) {
-        java.util.List<Integer> allowed = plugin.getConfig().getIntegerList("backpack.sizes-allowed");
-        if (allowed == null || allowed.isEmpty()) allowed = java.util.Arrays.asList(9,18,27,36,45,54);
-        if (!allowed.contains(current)) {
-            int starter = plugin.getConfig().getInt("backpack.starter-size", 9);
-            return allowed.contains(starter) ? starter : 9;
+    public boolean isOpen(UUID id){ return openInv.containsKey(id); }
+
+    public int nearestAllowed(int target){
+        int[] allowed = new int[]{9,18,27,36,45,54};
+        int best = allowed[0];
+        for (int a : allowed){
+            if (a <= target) best = a;
         }
-        return current;
+        return best;
     }
 
-    
-    
-    // Canonical open-check: single UUID variant
-    public boolean isOpen(java.util.UUID id){
-        return openInv.containsKey(id);
-    }
-
-public Integer nextSize(int current) {
-        java.util.List<Integer> allowed = plugin.getConfig().getIntegerList("backpack.sizes-allowed");
-        if (allowed == null || allowed.isEmpty()) allowed = java.util.Arrays.asList(9,18,27,36,45,54);
-        java.util.Collections.sort(allowed);
-        for (int s : allowed) if (s > current) return s;
+    public Integer nextSize(int current){
+        int[] allowed = new int[]{9,18,27,36,45,54};
+        for (int a : allowed){
+            if (a > current) return a;
+        }
         return null;
     }
 }

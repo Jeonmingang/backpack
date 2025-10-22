@@ -22,10 +22,10 @@ public class PagerListener implements Listener {
         this.store = store;
     }
 
+    // Title helper kept only as fallback; primary detection uses store.getOpenPage
     private boolean isBackpackTitle(String title){
         if (title == null) return false;
-        String fmt = plugin.getConfig().getString("backpack.title-format", "&6[개인가방] &7({page})");
-        // quick check – compare without colors and replace {page}
+        String fmt = plugin.getConfig().getString("pager.title", plugin.getConfig().getString("backpack.title-format", "&6가방 &7(Page {page})"));
         String plainFmt = org.bukkit.ChatColor.stripColor(org.bukkit.ChatColor.translateAlternateColorCodes('&', fmt));
         String plainTitle = org.bukkit.ChatColor.stripColor(title);
         String probe = plainFmt.replace("{page}", "");
@@ -34,34 +34,40 @@ public class PagerListener implements Listener {
 
     @EventHandler
     public void onClose(InventoryCloseEvent e){
-        if (!isBackpackTitle(e.getView().getTitle())) return;
-        Inventory top = e.getView().getTopInventory();
-        store.savePage(e.getPlayer().getUniqueId(), store.getOpenPage((org.bukkit.entity.Player)e.getPlayer()), top.getContents());
+        int page = store.getOpenPage((org.bukkit.entity.Player)e.getPlayer());
+        if (page < 2 && !isBackpackTitle(e.getView().getTitle())) return;
+        // save only if it's a pager inventory
+        if (page >= 2){
+            Inventory top = e.getView().getTopInventory();
+            store.savePage(e.getPlayer().getUniqueId(), page, top.getContents());
+            store.setOpenPage((org.bukkit.entity.Player)e.getPlayer(), 0);
+        }
     }
 
     @EventHandler
     public void onClick(InventoryClickEvent e){
         if (!(e.getWhoClicked() instanceof org.bukkit.entity.Player)) return;
-        if (!isBackpackTitle(e.getView().getTitle())) return;
+        org.bukkit.entity.Player p = (org.bukkit.entity.Player)e.getWhoClicked();
+        int page = store.getOpenPage(p);
+        if (page < 2 && !isBackpackTitle(e.getView().getTitle())) return;
 
-        // Q/F navigation
         if (e.getClick() == ClickType.DROP){ // Q
             e.setCancelled(true);
-            String title = plugin.getConfig().getString("backpack.title-format", "&6[개인가방] &7({page})");
-            store.nextPage((org.bukkit.entity.Player)e.getWhoClicked(), title);
+            String title = plugin.getConfig().getString("pager.title", "&6가방 &7(Page {page})");
+            store.nextPage(p, title);
             return;
         }
         if (e.getClick() == ClickType.SWAP_OFFHAND){ // F
             e.setCancelled(true);
-            String title = plugin.getConfig().getString("backpack.title-format", "&6[개인가방] &7({page})");
-            store.prevPage((org.bukkit.entity.Player)e.getWhoClicked(), title);
+            String title = plugin.getConfig().getString("pager.title", "&6가방 &7(Page {page})");
+            store.prevPage(p, title);
             return;
         }
     }
 
     @EventHandler
     public void onOpenWithBagItem(PlayerInteractEvent e){
-        // Right-click with a designated "bag item" opens page 1
+        // Right-click with a designated "bag item" opens main bag
         org.bukkit.event.block.Action action = e.getAction();
         if (action != org.bukkit.event.block.Action.RIGHT_CLICK_AIR && action != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) return;
 
