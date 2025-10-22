@@ -8,7 +8,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 
 public class CommandInterceptor implements Listener {
+
     private static final int MAX_MAIN_SIZE = 54;
+
     private final BackpackPlugin plugin;
     private final PageStore store;
 
@@ -25,19 +27,15 @@ public class CommandInterceptor implements Listener {
         String[] parts = msg.substring(1).split("\\s+");
         if (parts.length == 0) return;
 
-        // Base command match (allow aliases from plugin.yml)
         String base = parts[0];
-        if (!(base.equalsIgnoreCase("가방") || base.equalsIgnoreCase("backpack") || base.equalsIgnoreCase("bag") || base.equalsIgnoreCase("백팩"))){
-            return;
-        }
+        if (!(base.equalsIgnoreCase("가방") || base.equalsIgnoreCase("backpack") || base.equalsIgnoreCase("bag") || base.equalsIgnoreCase("백팩"))) return;
 
-        // Let the original command (/가방) handle help and admin cmds
-        if (parts.length == 1) return;
+        if (parts.length == 1) return; // executor handles
 
         String sub = parts[1];
         Player p = e.getPlayer();
+        int current = plugin.getStorage().getCurrentSize(p.getUniqueId());
 
-        // /가방 열기 <페이지>
         if (sub.equalsIgnoreCase("열기") && parts.length >= 3){
             int page;
             try { page = Integer.parseInt(parts[2]); } catch (NumberFormatException ex) { return; }
@@ -52,3 +50,28 @@ public class CommandInterceptor implements Listener {
             store.openPage(p, Math.max(2, page), title);
             return;
         }
+
+        if (sub.equalsIgnoreCase("다음")){
+            if (current < MAX_MAIN_SIZE){
+                e.setCancelled(true);
+                p.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&c메인가방을 &e54&c칸까지 먼저 확장하세요."));
+                return;
+            }
+            e.setCancelled(true);
+            String title = plugin.getConfig().getString("pager.title", "&6가방 &7(Page {page})");
+            store.nextPage(p, title);
+            return;
+        }
+
+        if (sub.equalsIgnoreCase("이전")){
+            if (current < MAX_MAIN_SIZE){
+                e.setCancelled(true);
+                p.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&c메인가방을 &e54&c칸까지 먼저 확장하세요."));
+                return;
+            }
+            e.setCancelled(true);
+            String title = plugin.getConfig().getString("pager.title", "&6가방 &7(Page {page})");
+            store.prevPage(p, title);
+        }
+    }
+}
