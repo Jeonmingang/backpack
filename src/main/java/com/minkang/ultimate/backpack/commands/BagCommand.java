@@ -33,7 +33,17 @@ public class BagCommand implements CommandExecutor {
         s.sendMessage(c("&e/가방 크기 <닉> <9|18|27|36|45|54> &7- 크기 설정"));
         s.sendMessage(c("&e/가방 설정 [닉] &7- 손에 든 아이템을 가방으로 지정"));
         s.sendMessage(c("&e/가방 리로드 &7- 설정 리로드"));
-    }
+    
+    sender.sendMessage(c("&8&l┏━━━━━━━━━━━━━━━━━━━━┓"));
+    sender.sendMessage(c("&6&l  가방 도움말 &7(페이지 시스템)"));
+    sender.sendMessage(c("&7  • &e/가방 &7- 1페이지 열기"));
+    sender.sendMessage(c("&7  • &e/가방 열기 &f<페이지> &7- 2~n 페이지 열기"));
+    sender.sendMessage(c("&7  • &e/가방 다음 &7/ &e/가방 이전 &7- 페이지 이동"));
+    sender.sendMessage(c("&7  • &eQ키&7(드랍) 다음  &8|  &eF키&7(보조손) 이전"));
+    sender.sendMessage(c("&7  • &e/가방 설정 &f<닉> <페이지> <9/18/27/36/45/54> &8- 관리자"));
+    sender.sendMessage(c("&8&l┗━━━━━━━━━━━━━━━━━━━━┛"));
+}
+
 
     private static final List<Integer> ALLOWED = Arrays.asList(9,18,27,36,45,54);
 
