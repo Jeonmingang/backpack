@@ -177,6 +177,30 @@ public class BagCommand implements CommandExecutor {
             return true;
         }
 
+        if (sub.equalsIgnoreCase("아이템")){
+            if (!(sender.isOp() || sender.hasPermission("ultimatebackpack.admin"))) { sender.sendMessage(c("&c권한이 없습니다.")); return true; }
+            if (!(sender instanceof Player)) { sender.sendMessage("플레이어만 사용 가능합니다."); return true; }
+            Player p = (Player) sender;
+            ItemStack hand = p.getInventory().getItemInMainHand();
+            if (hand == null || hand.getType() == Material.AIR){ sender.sendMessage(c("&c손에 든 아이템이 없습니다.")); return true; }
+            ItemMeta meta = hand.getItemMeta();
+            if (meta == null){ sender.sendMessage(c("&c이 아이템은 표시 이름을 설정할 수 없습니다.")); return true; }
+            // Flag as bag key (generic - opens clicker's own bag)
+            org.bukkit.persistence.PersistentDataContainer pdc = meta.getPersistentDataContainer();
+            pdc.set(com.minkang.ultimate.backpack.BackpackPlugin.getInstance().getKeyBagFlag(), org.bukkit.persistence.PersistentDataType.BYTE, (byte)1);
+            // Pretty name & lore
+            String baseName = meta.hasDisplayName() ? meta.getDisplayName() : ItemUtil.prettifyMaterial(hand.getType());
+            String finalName = c("&6" + baseName + " &7- 전용 가방 아이템");
+            meta.setDisplayName(finalName);
+            java.util.List<String> lore = meta.hasLore() ? new java.util.ArrayList<>(meta.getLore()) : new java.util.ArrayList<>();
+            lore.add(c("&8사용법: &7허공에 우클릭 → 본인 가방 열기"));
+            lore.add(c("&8팁: &7/가방 열기 <페이지> 로 페이지 열기"));
+            meta.setLore(lore);
+            hand.setItemMeta(meta);
+            sender.sendMessage(c("&a전용 가방 아이템으로 설정 완료."));
+            return true;
+        }
+
         help(sender);
         return true;
     }

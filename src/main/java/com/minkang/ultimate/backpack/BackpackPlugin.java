@@ -14,6 +14,7 @@ public class BackpackPlugin extends JavaPlugin {
     private static BackpackPlugin instance;
     private NamespacedKey keyBag;
     private NamespacedKey keyTicket;
+    private NamespacedKey keyBagFlag;
     private PersonalStorage storage;
     private PageStore pagerStore;
 
@@ -42,4 +43,6 @@ public class BackpackPlugin extends JavaPlugin {
     }
 
     public PageStore getPagerStore(){ return pagerStore; }
+
+    public org.bukkit.NamespacedKey getKeyBagFlag(){ return keyBagFlag; }
 }

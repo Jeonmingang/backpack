@@ -152,4 +152,18 @@ public class PagerListener implements Listener {
         }
         return 54;
     }
+
+    @org.bukkit.event.EventHandler
+    public void onOpenWithBagItem(org.bukkit.event.player.PlayerInteractEvent e){
+        org.bukkit.event.block.Action a = e.getAction();
+        if (a != org.bukkit.event.block.Action.RIGHT_CLICK_AIR && a != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) return;
+        org.bukkit.inventory.ItemStack it = e.getItem();
+        if (it == null || it.getType().isAir()) return;
+        org.bukkit.inventory.meta.ItemMeta meta = it.getItemMeta();
+        if (meta == null) return;
+        org.bukkit.persistence.PersistentDataContainer pdc = meta.getPersistentDataContainer();
+        if (!pdc.has(com.minkang.ultimate.backpack.BackpackPlugin.getInstance().getKeyBagFlag(), org.bukkit.persistence.PersistentDataType.BYTE)) return;
+        e.setCancelled(true);
+        com.minkang.ultimate.backpack.BackpackPlugin.getInstance().getStorage().open(e.getPlayer());
+    }
 }
