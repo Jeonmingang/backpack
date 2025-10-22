@@ -31,3 +31,23 @@ sanitize:
   max-pdc-string-bytes: 32760   # 큰 문자열 PDC 제거(UTF 한계 고려)
   max-lore-line-chars: 512      # 너무 긴 로어 줄 자르기
   max-book-page-chars: 8192     # 책 페이지 과도 길이 자르기
+
+
+# ─────────────────────────────────────────────────────────
+# 페이지 가방(2페이지 이상) 타이틀
+pager:
+  title: "&6가방 &7(Page {page})"
+
+# samItemEnchant 강화서 차단 키워드/PDC
+scroll-block:
+  list: ["강화서", "강화 주문서", "ENCHANT PAPER"]
+  pdc:  ["PAPER_ID", "ENCHANT"]
+
+# 확장권 설명 로어(자동 병합됨, 보기 좋게 안내)
+ticket-extra-lore:
+  - "&8――――――――――――――――――――"
+  - "&7메인 가방이 &f54칸 &7이면,"
+  - "&7&f[웅크리고] &7확장권을 사용해"
+  - "&7페이지 &f2 &7부터 &f9→18→27→…→54&7로"
+  - "&7순차 확장됩니다."
+  - "&8(Q=다음, F=이전 페이지)"
