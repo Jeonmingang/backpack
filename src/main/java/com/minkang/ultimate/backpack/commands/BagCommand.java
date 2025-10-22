@@ -201,6 +201,38 @@ public class BagCommand implements CommandExecutor {
             return true;
         }
 
+        if (sub.equalsIgnoreCase("지급")){
+            if (!(sender.isOp() || sender.hasPermission("ultimatebackpack.admin"))) { sender.sendMessage(c("&c권한이 없습니다.")); return true; }
+            if (args.length < 3){ sender.sendMessage(c("&c사용법: /가방 지급 <닉> <개수>")); return true; }
+            org.bukkit.entity.Player t = org.bukkit.Bukkit.getPlayerExact(args[1]);
+            if (t == null){ sender.sendMessage(c("&c해당 플레이어가 오프라인입니다.")); return true; }
+            int amount = 1;
+            try { amount = Integer.parseInt(args[2]); } catch (Exception e){ sender.sendMessage(c("&c개수는 숫자로 입력하세요.")); return true; }
+            if (amount < 1) amount = 1;
+            // Build bag-only item from config
+            org.bukkit.configuration.file.FileConfiguration cfg = plugin.getConfig();
+            String matStr = cfg.getString("bag-item.material", "PAPER");
+            org.bukkit.Material mat;
+            try { mat = org.bukkit.Material.valueOf(matStr); } catch (IllegalArgumentException ex) { mat = org.bukkit.Material.PAPER; }
+            String name = cfg.getString("bag-item.display-name", "&6가방 전용 아이템");
+            java.util.List<String> lore = new java.util.ArrayList<>(cfg.getStringList("bag-item.lore"));
+            org.bukkit.inventory.ItemStack it = new org.bukkit.inventory.ItemStack(mat);
+            org.bukkit.inventory.meta.ItemMeta im = it.getItemMeta();
+            if (im != null){
+                im.setDisplayName(c(name));
+                java.util.List<String> pretty = new java.util.ArrayList<>();
+                for (String ln : lore) pretty.add(c(ln));
+                if (!pretty.isEmpty()) im.setLore(pretty);
+                // Flag as bag item
+                im.getPersistentDataContainer().set(com.minkang.ultimate.backpack.BackpackPlugin.getInstance().getKeyBagFlag(), org.bukkit.persistence.PersistentDataType.BYTE, (byte)1);
+                it.setItemMeta(im);
+            }
+            it.setAmount(amount);
+            t.getInventory().addItem(it);
+            sender.sendMessage(c("&a가방 전용 아이템 지급 완료: &f" + t.getName() + " &7x" + amount));
+            return true;
+        }
+
         help(sender);
         return true;
     }
