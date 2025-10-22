@@ -51,15 +51,27 @@ public class BackpackListener implements Listener {
             target = plugin.getStorage().nextSize(current);
         }
 
+        // 쉬프트+우클릭: 메인가방이 54칸이면 2페이지 9칸을 생성/오픈
+        if (p.isSneaking() && current >= 54) {
+            // 소모
+            if (it.getAmount() > 0) it.setAmount(it.getAmount()-1);
+            String title = plugin.getConfig().getString("pager.title", "&6가방 &7(Page {page})");
+            // 기본 9칸으로 초기화
+            plugin.getPagerStore().setPageSize(p.getUniqueId(), 2, 9);
+            plugin.getPagerStore().openPage(p, 2, title);
+            p.sendMessage(cc("&a2페이지가 &e9칸&a으로 생성되었습니다."));
+            e.setCancelled(true);
+            return;
+        }
+
         if (target == null) { p.sendMessage(cc("&c더 이상 확장할 수 없습니다.")); e.setCancelled(true); return; }
-        if (target <= current) { p.sendMessage(cc("&c이미 해당 크기 이상입니다. 현재: &e" + current)); e.setCancelled(true); return; }
+        if (target <= current) { p.sendMessage(cc("&c이미 해당 크기 이상입니다. 현재: &e" + current + "&7 / 최대 54칸. &f쉬프트+우클릭으로 2페이지를 여세요.")); e.setCancelled(true); return; }
 
         plugin.getStorage().setCurrentSize(p.getUniqueId(), target);
         // 1장 소모
-        it.setAmount(it.getAmount() - 1);
+        if (it.getAmount() > 0) it.setAmount(it.getAmount() - 1);
         p.sendMessage(cc("&a가방 크기가 &e" + current + " &7→ &e" + target + " &a로 확장되었습니다."));
         e.setCancelled(true);
-    }
 
     // ---- 강화서(스크롤) 차단 ----
     private boolean containsAny(String text, java.util.List<String> needles){
@@ -71,6 +83,14 @@ public class BackpackListener implements Listener {
         return false;
     }
 
+    
+    private boolean isTicket(ItemStack it){
+        if (it == null || it.getType() == Material.AIR) return false;
+        ItemMeta m = it.getItemMeta();
+        if (m == null) return false;
+        String tag = m.getPersistentDataContainer().get(plugin.getKeyTicket(), PersistentDataType.STRING);
+        return tag != null;
+    }
     private boolean isBlockedScroll(ItemStack it){
         if (it == null || it.getType() == Material.AIR) return false;
         FileConfiguration cfg = plugin.getConfig();

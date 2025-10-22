@@ -13,6 +13,15 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
 public class PagerListener implements Listener {
+    private boolean isTicket(org.bukkit.inventory.ItemStack it){
+        if (it == null || it.getType().isAir()) return false;
+        org.bukkit.inventory.meta.ItemMeta m = it.getItemMeta();
+        if (m == null) return false;
+        String tag = m.getPersistentDataContainer().get(plugin.getKeyTicket(), PersistentDataType.STRING);
+        return tag != null;
+    }
+    
+    private static final int MAX_MAIN_SIZE = 54;
 
     private final BackpackPlugin plugin;
     private final PageStore store;
@@ -80,13 +89,25 @@ public class PagerListener implements Listener {
         int page = store.getOpenPage(p);
         if (page < 2 && !isBackpackTitle(e.getView().getTitle())) return;
 
-        if (e.getClick() == ClickType.DROP){
+        if (e.getClick() == ClickType.DROP) {
+            e.setCancelled(true);
+            int current = plugin.getStorage().getCurrentSize(p.getUniqueId());
+            if (current < MAX_MAIN_SIZE){
+                p.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&',"&c메인가방을 &e54&c칸까지 먼저 확장하세요."));
+                return;
+            }
             e.setCancelled(true);
             String title = plugin.getConfig().getString("pager.title", "&6가방 &7(Page {page})");
             store.nextPage(p, title);
             return;
         }
-        if (e.getClick() == ClickType.SWAP_OFFHAND){
+        if (e.getClick() == ClickType.SWAP_OFFHAND) {
+            e.setCancelled(true);
+            int current = plugin.getStorage().getCurrentSize(p.getUniqueId());
+            if (current < MAX_MAIN_SIZE){
+                p.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&',"&c메인가방을 &e54&c칸까지 먼저 확장하세요."));
+                return;
+            }
             e.setCancelled(true);
             String title = plugin.getConfig().getString("pager.title", "&6가방 &7(Page {page})");
             store.prevPage(p, title);
@@ -96,7 +117,54 @@ public class PagerListener implements Listener {
         if (e.getClickedInventory() == e.getView().getBottomInventory()){
             if (e.isShiftClick()){
                 if (isBlockedScroll(e.getCurrentItem())) { e.setCancelled(true); p.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&',"&c이 아이템은 가방에 넣을 수 없습니다.")); }
-            } else if (e.getClick() != ClickType.SWAP_OFFHAND) {
+            }
+        // Ticket usage on top inventory (page GUI): RIGHT to expand size, SHIFT+RIGHT at 54 → open next page (9)
+        if (e.getClickedInventory() == e.getView().getTopInventory()){
+            org.bukkit.event.inventory.ClickType ct = e.getClick();
+            org.bukkit.entity.Player pp = (org.bukkit.entity.Player)e.getWhoClicked();
+            if ((ct == ClickType.RIGHT || ct == ClickType.SHIFT_RIGHT) && e.getCursor() != null && isTicket(e.getCursor())){
+                e.setCancelled(true);
+                int pageNow = store.getOpenPage(pp);
+                if (pageNow < 2 && !isBackpackTitle(e.getView().getTitle())) return; // safety
+
+                int sizeNow = store.getPageSize(pp.getUniqueId(), pageNow, 9);
+                if (ct == ClickType.SHIFT_RIGHT){
+                    if (sizeNow >= 54){
+                        // open next page with 9
+                        int nextPage = Math.max(2, pageNow+1);
+                        store.setPageSize(pp.getUniqueId(), nextPage, 9);
+                        String title = plugin.getConfig().getString("pager.title", "&6가방 &7(Page {page})");
+                        store.openPage(pp, nextPage, title);
+                        if (e.getCursor().getAmount() > 0) e.getCursor().setAmount(e.getCursor().getAmount()-1);
+                        pp.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&',"&a" + nextPage + "페이지가 &e9칸&a으로 생성되었습니다."));
+                    } else {
+                        // shift-right while not full: treat as normal increment
+                        Integer target = plugin.getStorage().nearestAllowed(sizeNow+9);
+                        if (target != null && target > sizeNow && target <= 54){
+                            store.setPageSize(pp.getUniqueId(), pageNow, target);
+                            String title = plugin.getConfig().getString("pager.title", "&6가방 &7(Page {page})");
+                            store.openPage(pp, pageNow, title);
+                            if (e.getCursor().getAmount() > 0) e.getCursor().setAmount(e.getCursor().getAmount()-1);
+                            pp.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&',"&a페이지 크기: &e" + sizeNow + " &7→ &e" + target));
+                        }
+                    }
+                } else { // RIGHT (no shift)
+                    if (sizeNow >= 54){
+                        pp.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&',"&c이미 최대 크기(54칸)입니다. &f쉬프트+우클릭으로 다음 페이지를 여세요."));
+                    } else {
+                        Integer target = plugin.getStorage().nearestAllowed(sizeNow+9);
+                        if (target == null || target <= sizeNow) target = Math.min(54, sizeNow + 9);
+                        store.setPageSize(pp.getUniqueId(), pageNow, target);
+                        String title = plugin.getConfig().getString("pager.title", "&6가방 &7(Page {page})");
+                        store.openPage(pp, pageNow, title);
+                        if (e.getCursor().getAmount() > 0) e.getCursor().setAmount(e.getCursor().getAmount()-1);
+                        pp.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&',"&a페이지 크기: &e" + sizeNow + " &7→ &e" + target));
+                    }
+                }
+                return;
+            }
+        }
+ else if (e.getClick() != ClickType.SWAP_OFFHAND) {
                 if (isBlockedScroll(e.getCursor())) { e.setCancelled(true); p.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&',"&c이 아이템은 가방에 넣을 수 없습니다.")); }
             }
         }
@@ -124,8 +192,19 @@ public class PagerListener implements Listener {
             }
         }
         if (open){
+            org.bukkit.entity.Player p2 = e.getPlayer();
+            int current2 = plugin.getStorage().getCurrentSize(p2.getUniqueId());
             e.setCancelled(true);
-            plugin.getStorage().open(e.getPlayer());
+            if (p2.isSneaking()){
+                if (current2 < MAX_MAIN_SIZE){
+                    p2.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&',"&c메인가방을 &e54&c칸까지 먼저 확장하세요."));
+                } else {
+                    String title = plugin.getConfig().getString("pager.title", "&6가방 &7(Page {page})");
+                    store.openPage(p2, 2, title);
+                }
+            } else {
+                plugin.getStorage().open(p2);
+            }
         }
     }
 }

@@ -8,6 +8,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 
 public class CommandInterceptor implements Listener {
+    private static final int MAX_MAIN_SIZE = 54;
     private final BackpackPlugin plugin;
     private final PageStore store;
 
@@ -39,30 +40,15 @@ public class CommandInterceptor implements Listener {
         // /가방 열기 <페이지>
         if (sub.equalsIgnoreCase("열기") && parts.length >= 3){
             int page;
-            try { page = Integer.parseInt(parts[2]); }
-            catch (NumberFormatException ex) { return; } // not a number -> let original command handle
+            try { page = Integer.parseInt(parts[2]); } catch (NumberFormatException ex) { return; }
+            if (page <= 1) return;
+            if (current < MAX_MAIN_SIZE){
+                e.setCancelled(true);
+                p.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&c메인가방을 &e54&c칸까지 먼저 확장하세요."));
+                return;
+            }
             e.setCancelled(true);
-            String title = plugin.getConfig().getString("backpack.title-format", "&6[개인가방] &7({page})");
+            String title = plugin.getConfig().getString("pager.title", "&6가방 &7(Page {page})");
             store.openPage(p, Math.max(2, page), title);
             return;
         }
-
-        // /가방 다음
-        if (sub.equalsIgnoreCase("다음")){
-            e.setCancelled(true);
-            String title = plugin.getConfig().getString("backpack.title-format", "&6[개인가방] &7({page})");
-            store.nextPage(p, title);
-            return;
-        }
-
-        // /가방 이전
-        if (sub.equalsIgnoreCase("이전")){
-            e.setCancelled(true);
-            String title = plugin.getConfig().getString("backpack.title-format", "&6[개인가방] &7({page})");
-            store.prevPage(p, title);
-            return;
-        }
-
-        // Any other subcommand -> do NOT consume; keep original behavior
-    }
-}
