@@ -1,14 +1,13 @@
-
 name: UltimateBackpack
 main: com.minkang.ultimate.backpack.BackpackPlugin
-version: 1.4.6
+version: 1.3.5
 api-version: 1.16
-author: Mingang
+author: Mingang Jeon & Team
 commands:
   가방:
     description: 개인 가방 명령어
     aliases: [backpack, bag, 백팩]
 permissions:
   ultimatebackpack.admin:
-    description: 운영자 권한(지급확장권/크기/리로드/아이템)
+    description: 운영자 권한(지급/크기/리로드/설정)
     default: op

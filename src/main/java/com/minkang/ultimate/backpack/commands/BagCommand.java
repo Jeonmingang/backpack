@@ -1,66 +1,41 @@
+
 package com.minkang.ultimate.backpack.commands;
 
 import com.minkang.ultimate.backpack.BackpackPlugin;
+import com.minkang.ultimate.backpack.util.ItemUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 public class BagCommand implements CommandExecutor {
-    private org.bukkit.inventory.ItemStack makeBagItem(int amount){
-        org.bukkit.configuration.file.FileConfiguration cfg = plugin.getConfig();
-        String matStr = cfg.getString("bag-item.material", "CHEST");
-        org.bukkit.Material mat;
-        try { mat = org.bukkit.Material.valueOf(matStr); } catch (IllegalArgumentException ex) { mat = org.bukkit.Material.CHEST; }
-        String name = cfg.getString("bag-item.display-name", "&6휴대용 가방");
-        java.util.List<String> lore = cfg.getStringList("bag-item.lore");
-        if (lore == null || lore.isEmpty()){
-            lore = java.util.Arrays.asList(
-                "&7우클릭: &f메인가방 열기",
-                "&7쉬프트+우클릭: &f(메인 54칸 달성 시) 2페이지 열기",
-                "&7확장권: &f가방 GUI에서 우클릭으로 확장, 쉬프트+우클릭으로 다음 페이지 생성"
-            );
-        }
-        org.bukkit.inventory.ItemStack it = new org.bukkit.inventory.ItemStack(mat);
-        org.bukkit.inventory.meta.ItemMeta im = it.getItemMeta();
-        if (im != null){
-            im.setDisplayName(org.bukkit.ChatColor.translateAlternateColorCodes('&', name));
-            java.util.List<String> colored = new java.util.ArrayList<>();
-            for (String ln : lore) colored.add(org.bukkit.ChatColor.translateAlternateColorCodes('&', ln));
-            im.setLore(colored);
-            im.getPersistentDataContainer().set(plugin.getKeyBagFlag(), org.bukkit.persistence.PersistentDataType.BYTE, (byte)1);
-            it.setItemMeta(im);
-        }
-        it.setAmount(Math.max(1, amount));
-        return it;
-    }
-    
-
-    private static final int MAX_MAIN_SIZE = 54;
-    private static final List<Integer> ALLOWED = Arrays.asList(9,18,27,36,45,54);
-
     private final BackpackPlugin plugin;
     public BagCommand(BackpackPlugin plugin){ this.plugin = plugin; }
 
     private static String c(String s){ return ChatColor.translateAlternateColorCodes('&', s==null?"":s); }
 
-    private void help(CommandSender s) {
-        s.sendMessage(c("&e/가방 &7- 메인가방 열기"));
-        s.sendMessage(c("&e/가방 열기 &f<페이지> &7- 2~n 페이지 열기 (&c메인가방 54칸 이후 가능&)"));
-        s.sendMessage(c("&e/가방 다음 &7/ &e/가방 이전 &7- 페이지 이동 (GUI에서도 Q/F, &c54칸 이후&)"));
+    private void help(CommandSender s){
+        s.sendMessage(c("&e/가방 열기 &7- (허용 시) 개인가방 열기"));
         s.sendMessage(c("&e/가방 정보 [닉] &7- 가방 크기 확인"));
-        // 관리자
-        s.sendMessage(c("&e/가방 지급확장권 <닉> <갯수> &7- 다음 단계로 확장되는 확장권 지급"));
-        s.sendMessage(c("&e/가방 크기 <닉> <페이지> <9/18/27/36/45/54> &7- 페이지 크기 설정(1=메인)"));
-        s.sendMessage(c("&e/가방 아이템 &7- 손 아이템을 전용 가방 아이템으로 설정(우클릭=메인, 쉬프트+우클릭=2페이지 / 54칸 이후)"));
+        s.sendMessage(c("&e/가방 지급아이템 <닉> [수량] &7- 가방 아이템 지급"));
+        s.sendMessage(c("&e/가방 지급확장권 <닉> [수량] [크기] &7- 확장권 지급(우클릭 시 확장, 크기 생략 시 다음 단계)"));
+        s.sendMessage(c("&e/가방 크기 <닉> <9|18|27|36|45|54> &7- 크기 설정"));
+        s.sendMessage(c("&e/가방 설정 [닉] &7- 손에 든 아이템을 가방으로 지정"));
         s.sendMessage(c("&e/가방 리로드 &7- 설정 리로드"));
     }
+
+    private static final List<Integer> ALLOWED = Arrays.asList(9,18,27,36,45,54);
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
@@ -80,30 +55,14 @@ public class BagCommand implements CommandExecutor {
             if (!plugin.getConfig().getBoolean("backpack.allow-command-open", true)) {
                 sender.sendMessage(c("&c명령으로 열 수 없습니다. 가방 아이템을 사용하세요.")); return true;
             }
-            Player p = (Player) sender;
-            int current = plugin.getStorage().getCurrentSize(p.getUniqueId());
-            if (args.length == 1){
-                plugin.getStorage().open(p);
-                return true;
-            }
-            int page;
-            try { page = Integer.parseInt(args[1]); } catch (NumberFormatException ex) { sender.sendMessage(c("&c페이지는 숫자여야 합니다.")); return true; }
-            if (page <= 1){
-                plugin.getStorage().open(p);
-                return true;
-            }
-            if (current < MAX_MAIN_SIZE){
-                sender.sendMessage(c("&c메인가방을 &e54&c칸까지 먼저 확장하세요."));
-                return true;
-            }
-            String title = plugin.getConfig().getString("pager.title", "&6가방 &7(Page {page})");
-            plugin.getPagerStore().openPage(p, Math.max(2, page), title);
+            plugin.getStorage().open((Player)sender);
             return true;
         }
 
         if (sub.equalsIgnoreCase("정보")){
             Player t;
             if (args.length >= 2){
+                if (!(sender.isOp() || sender.hasPermission("ultimatebackpack.admin"))) { sender.sendMessage(c("&c권한이 없습니다.")); return true; }
                 t = Bukkit.getPlayerExact(args[1]);
                 if (t == null){ sender.sendMessage(c("&c해당 플레이어를 찾을 수 없습니다.")); return true; }
             } else {
@@ -116,87 +75,95 @@ public class BagCommand implements CommandExecutor {
             return true;
         }
 
-        if (sub.equalsIgnoreCase("지급확장권")){
+        if (sub.equalsIgnoreCase("지급아이템")){
             if (!(sender.isOp() || sender.hasPermission("ultimatebackpack.admin"))) { sender.sendMessage(c("&c권한이 없습니다.")); return true; }
-            if (args.length < 3){ sender.sendMessage(c("&c사용법: /가방 지급확장권 <닉> <갯수>")); return true; }
+            if (args.length < 2){ sender.sendMessage(c("&c사용법: /가방 지급아이템 <닉> [수량]")); return true; }
             Player t = Bukkit.getPlayerExact(args[1]);
             if (t == null){ sender.sendMessage(c("&c해당 플레이어를 찾을 수 없습니다.")); return true; }
             int amount = 1;
-            try { amount = Integer.parseInt(args[2]); } catch (NumberFormatException ignored) {}
-            if (amount < 1) amount = 1;
-
-            org.bukkit.configuration.file.FileConfiguration cfg = plugin.getConfig();
-            String matStr = cfg.getString("ticket.material", "PAPER");
-            org.bukkit.Material mat;
-            try { mat = org.bukkit.Material.valueOf(matStr); } catch (IllegalArgumentException ex) { mat = org.bukkit.Material.PAPER; }
-            String name = cfg.getString("ticket.display-name", "&6가방 확장권");
-            java.util.List<String> lore = new java.util.ArrayList<>(cfg.getStringList("ticket.lore"));
-            java.util.List<String> extra = cfg.getStringList("ticket-extra-lore");
-            java.util.LinkedHashSet<String> merged = new java.util.LinkedHashSet<>();
-            for (String ln : lore) merged.add(c(ln));
-            for (String ln : extra) merged.add(c(ln));
-
-            org.bukkit.inventory.ItemStack it = new org.bukkit.inventory.ItemStack(mat);
-            org.bukkit.inventory.meta.ItemMeta im = it.getItemMeta();
-            if (im != null){
-                im.setDisplayName(c(name));
-                if (!merged.isEmpty()) im.setLore(new java.util.ArrayList<>(merged));
-                im.getPersistentDataContainer().set(plugin.getKeyTicket(), org.bukkit.persistence.PersistentDataType.STRING, "next");
-                it.setItemMeta(im);
+            if (args.length >= 3){
+                try { amount = Integer.parseInt(args[2]); } catch (NumberFormatException ignored) {}
+                if (amount < 1) amount = 1;
             }
+            FileConfiguration cfg = plugin.getConfig();
+            String matStr = cfg.getString("starter-item.material", "CHEST");
+            Material mat;
+            try { mat = Material.valueOf(matStr); } catch (IllegalArgumentException ex) { mat = Material.CHEST; }
+            String name = cfg.getString("starter-item.display-name", "&6가방");
+            List<String> lore = cfg.getStringList("starter-item.lore");
+            ItemStack it = com.minkang.ultimate.backpack.util.ItemUtil.buildTaggedItem(mat, name, lore, plugin.getKeyBag(), "1");
             it.setAmount(amount);
             t.getInventory().addItem(it);
-            sender.sendMessage(c("&a확장권 지급: &7" + t.getName() + " &7(다음 단계) x" + amount));
+            sender.sendMessage(c("&a가방 아이템 지급: &7" + t.getName() + " x" + amount));
             return true;
         }
 
-        if (sub.equalsIgnoreCase("아이템")){
+        if (sub.equalsIgnoreCase("지급확장권")){
             if (!(sender.isOp() || sender.hasPermission("ultimatebackpack.admin"))) { sender.sendMessage(c("&c권한이 없습니다.")); return true; }
-            if (!(sender instanceof org.bukkit.entity.Player)) { sender.sendMessage("플레이어만 사용 가능합니다."); return true; }
-            org.bukkit.entity.Player p = (org.bukkit.entity.Player) sender;
-            org.bukkit.inventory.ItemStack hand = p.getInventory().getItemInMainHand();
-            if (hand == null || hand.getType() == org.bukkit.Material.AIR){ sender.sendMessage(c("&c손에 든 아이템이 없습니다.")); return true; }
-            // apply bag flag + name/lore
-            org.bukkit.inventory.ItemStack template = makeBagItem(1);
-            org.bukkit.inventory.meta.ItemMeta src = template.getItemMeta();
-            if (src != null){
-                org.bukkit.inventory.meta.ItemMeta meta = hand.getItemMeta();
-                if (meta != null){
-                    meta.setDisplayName(src.getDisplayName());
-                    meta.setLore(src.getLore());
-                    meta.getPersistentDataContainer().set(plugin.getKeyBagFlag(), org.bukkit.persistence.PersistentDataType.BYTE, (byte)1);
-                    hand.setItemMeta(meta);
-                    sender.sendMessage(c("&a손 아이템을 가방 아이템으로 설정하고 이름/로어를 적용했습니다."));
-                } else {
-                    sender.sendMessage(c("&c이 아이템은 메타데이터를 변경할 수 없습니다."));
-                }
+            if (args.length < 2){ sender.sendMessage(c("&c사용법: /가방 지급확장권 <닉> [수량] [크기]")); return true; }
+            Player t = Bukkit.getPlayerExact(args[1]);
+            if (t == null){ sender.sendMessage(c("&c해당 플레이어를 찾을 수 없습니다.")); return true; }
+            int amount = 1;
+            if (args.length >= 3){
+                try { amount = Integer.parseInt(args[2]); } catch (NumberFormatException ignored) {}
+                if (amount < 1) amount = 1;
             }
+            // optional size
+            String sizeTag = "next";
+            if (args.length >= 4){
+                try {
+                    int req = Integer.parseInt(args[3]);
+                    if (ALLOWED.contains(req)) sizeTag = "size:" + req;
+                } catch (NumberFormatException ignored) {}
+            }
+            FileConfiguration cfg = plugin.getConfig();
+            String matStr = cfg.getString("ticket.material", "PAPER");
+            Material mat;
+            try { mat = Material.valueOf(matStr); } catch (IllegalArgumentException ex) { mat = Material.PAPER; }
+            String name = cfg.getString("ticket.display-name", "&d가방 확장권");
+            List<String> lore = new ArrayList<>(cfg.getStringList("ticket.lore"));
+            // 안내 한 줄 추가(선택)
+            lore.add(c("&7지정 크기: &f" + (sizeTag.startsWith("size:") ? sizeTag.substring(5) : "다음 단계")));
+            ItemStack it = com.minkang.ultimate.backpack.util.ItemUtil.buildTaggedItem(mat, name, lore, plugin.getKeyTicket(), sizeTag);
+            it.setAmount(amount);
+            t.getInventory().addItem(it);
+            sender.sendMessage(c("&a확장권 지급: &7" + t.getName() + " x" + amount + " &8(" + (sizeTag.startsWith("size:")?sizeTag.substring(5):"다음 단계") + ")"));
             return true;
         }
 
         if (sub.equalsIgnoreCase("크기")){
             if (!(sender.isOp() || sender.hasPermission("ultimatebackpack.admin"))) { sender.sendMessage(c("&c권한이 없습니다.")); return true; }
-            if (args.length < 4){ sender.sendMessage(c("&c사용법: /가방 크기 <닉> <페이지> <9/18/27/36/45/54>  &7(페이지 1 = 메인가방)")); return true; }
+            if (args.length < 3){ sender.sendMessage(c("&c사용법: /가방 크기 <닉> <9|18|27|36|45|54>")); return true; }
             Player t = Bukkit.getPlayerExact(args[1]);
             if (t == null){ sender.sendMessage(c("&c해당 플레이어를 찾을 수 없습니다.")); return true; }
-            int page; int size;
-            try { page = Integer.parseInt(args[2]); } catch (NumberFormatException e){ sender.sendMessage(c("&c페이지는 숫자여야 합니다.")); return true; }
-            try { size = Integer.parseInt(args[3]); } catch (NumberFormatException e){ sender.sendMessage(c("&c크기는 숫자여야 합니다.")); return true; }
-            if (!ALLOWED.contains(size)){ sender.sendMessage(c("&c크기는 9/18/27/36/45/54 중 하나여야 합니다.")); return true; }
-            if (page <= 1){ plugin.getStorage().setCurrentSize(t.getUniqueId(), size); }
-            else { plugin.getPagerStore().setPageSize(t.getUniqueId(), page, size); }
-            sender.sendMessage(c("&a설정 완료: &f" + t.getName() + " &7페이지 &e" + page + " &7→ &e" + size));
+            int req;
+            try { req = Integer.parseInt(args[2]); } catch (NumberFormatException ex) { sender.sendMessage(c("&c숫자를 입력하세요.")); return true; }
+            if (!ALLOWED.contains(req)){ sender.sendMessage(c("&c허용 크기만 설정 가능합니다: " + ALLOWED)); return true; }
+            plugin.getStorage().setCurrentSize(t.getUniqueId(), req);
+            sender.sendMessage(c("&a설정 완료: &7" + t.getName() + " → &e" + req));
             return true;
         }
-        if (sub.equalsIgnoreCase("지급")){
-            if (!(sender.isOp() || sender.hasPermission("ultimatebackpack.admin"))) { sender.sendMessage(c("&c권한이 없습니다.")); return true; }
-            if (args.length < 3){ sender.sendMessage(c("&c사용법: /가방 지급 <닉> <갯수>")); return true; }
-            org.bukkit.entity.Player t = org.bukkit.Bukkit.getPlayerExact(args[1]);
-            if (t == null){ sender.sendMessage(c("&c해당 플레이어를 찾을 수 없습니다.")); return true; }
-            int amount = 1; try { amount = Integer.parseInt(args[2]); } catch (Exception ex) {}
-            org.bukkit.inventory.ItemStack it = makeBagItem(amount);
-            t.getInventory().addItem(it);
-            sender.sendMessage(c("&a가방 아이템 지급 완료: &f" + t.getName() + " &7x" + amount));
+
+        if (sub.equalsIgnoreCase("설정")){
+            Player p;
+            if (args.length >= 2){
+                if (!(sender.isOp() || sender.hasPermission("ultimatebackpack.admin"))) { sender.sendMessage(c("&c권한이 없습니다.")); return true; }
+                p = Bukkit.getPlayerExact(args[1]);
+                if (p == null){ sender.sendMessage(c("&c해당 플레이어를 찾을 수 없습니다.")); return true; }
+            } else {
+                if (!(sender instanceof Player)){ sender.sendMessage("플레이어만 사용 가능합니다."); return true; }
+                p = (Player)sender;
+            }
+            ItemStack hand = p.getInventory().getItemInMainHand();
+            if (hand == null || hand.getType() == Material.AIR){ sender.sendMessage(c("&c손에 아이템이 없습니다.")); return true; }
+            ItemMeta meta = hand.getItemMeta();
+            if (meta == null){ sender.sendMessage(c("&c이 아이템은 표시 이름을 설정할 수 없습니다.")); return true; }
+            String nick = (args.length >= 2) ? args[1] : p.getName();
+            String baseName = meta.hasDisplayName() ? meta.getDisplayName() : ItemUtil.prettifyMaterial(hand.getType());
+            String finalName = c("&6" + baseName + " &7( &f" + nick + " &7)&f 의 가방");
+            meta.setDisplayName(finalName);
+            hand.setItemMeta(meta);
+            sender.sendMessage(c("&a손에 든 아이템을 가방으로 지정했습니다: &f" + ChatColor.stripColor(finalName)));
             return true;
         }
 
